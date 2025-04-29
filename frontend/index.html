@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Agent Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .chat-box {
+      width: 90%;
+      max-width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      overflow-y: auto;
+      height: 400px;
+    }
+    .chat-message {
+      margin: 10px 0;
+      white-space: pre-wrap;
+    }
+    .chat-message.user {
+      text-align: right;
+      color: #007bff;
+    }
+    .chat-message.bot {
+      text-align: left;
+      color: #333;
+    }
+    .input-container {
+      margin-top: 20px;
+      width: 90%;
+      max-width: 600px;
+      display: flex;
+    }
+    input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      margin-left: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .loading {
+      font-style: italic;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>Multi-Agent Chatbot</h1>
+  <div class="chat-box" id="chat-box"></div>
+  <div class="input-container">
+    <input type="text" id="user-input" placeholder="Type your message here...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const userId = 'user123'; // Temporary static ID for testing
+
+    function appendMessage(content, sender) {
+      const msg = document.createElement('div');
+      msg.className = `chat-message ${sender}`;
+      msg.innerText = content;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return msg;
+    }
+
+    function appendLoading() {
+      const loadingMsg = document.createElement('div');
+      loadingMsg.id = 'loading-msg';
+      loadingMsg.className = 'chat-message bot loading';
+      loadingMsg.innerText = 'Chatbot is thinking...';
+      chatBox.appendChild(loadingMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function removeLoading() {
+      const loadingMsg = document.getElementById('loading-msg');
+      if (loadingMsg) {
+        loadingMsg.remove();
+      }
+    }
+
+    function typeResponse(element, text, index = 0) {
+      if (index < text.length) {
+        element.innerText += text.charAt(index);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        setTimeout(() => typeResponse(element, text, index + 1), 20);
+      }
+    }
+
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+      appendMessage(message, 'user');
+      userInput.value = '';
+      appendLoading();
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, message })
+        });
+
+        const data = await response.json();
+        removeLoading();
+        const botMsg = appendMessage('', 'bot');
+        typeResponse(botMsg, data.response);
+      } catch (error) {
+        removeLoading();
+        appendMessage("Oops! Something went wrong.", 'bot');
+      }
+    }
+
+    // Send message on Enter key press
+    userInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
